@@ -7,7 +7,6 @@ import { Bookmarks } from "./components/Bookmarks";
 import { Settings } from "./components/Settings";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import type { Settings as SettingsType } from "./types/quran";
-import { Footer } from "./components/Footer";
 
 function App() {
   const [settings, setSettings] = useLocalStorage<SettingsType>("settings", {
@@ -17,13 +16,9 @@ function App() {
     theme: "dark",
   });
 
-  // Apply theme to document
+  // применяем тему
   useEffect(() => {
-    if (settings.theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    document.documentElement.classList.toggle("dark", settings.theme === "dark");
   }, [settings.theme]);
 
   const handleToggleTheme = () => {
@@ -32,10 +27,6 @@ function App() {
       theme: prev.theme === "dark" ? "light" : "dark",
     }));
   };
-
-  function handleNavigateHome(): void {
-    throw new Error("Function not implemented.");
-  }
 
   return (
     <div className={`min-h-screen transition-colors ${settings.theme}`}>
@@ -46,19 +37,43 @@ function App() {
 
       <main>
         <Routes>
+          {/* Главная страница */}
           <Route path="/" element={<Dashboard settings={settings} />} />
-          <Route path="/surah/:id" element={<SurahPage settings={settings} />} />
+
+          {/* Страница конкретной суры */}
+          <Route
+            path="/surah/:id"
+            element={<SurahPage settings={settings} />}
+          />
+
+          {/* Закладки */}
           <Route path="/bookmarks" element={<Bookmarks />} />
+
+          {/* Настройки */}
           <Route
             path="/settings"
             element={
               <Settings settings={settings} onSettingsChange={setSettings} />
             }
           />
+
+          {/* fallback, если путь неправильный */}
+          <Route
+            path="*"
+            element={
+              <div className="flex flex-col items-center justify-center min-h-screen text-gray-400">
+                <p className="mb-4">Страница не найдена</p>
+                <a
+                  href="/"
+                  className="px-4 py-2 text-white bg-gray-700 rounded-lg hover:bg-gray-600"
+                >
+                  На главную
+                </a>
+              </div>
+            }
+          />
         </Routes>
       </main>
-
-      <Footer onNavigateHome={handleNavigateHome} />
     </div>
   );
 }

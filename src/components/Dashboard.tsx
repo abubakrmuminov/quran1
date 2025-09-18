@@ -52,9 +52,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ settings }) => {
                 </p>
                 <motion.button
                   onClick={() =>
-                    navigate(
-                      `/surah/${lastRead.surahNumber}?ayah=${lastRead.ayahNumber}`
-                    )
+                    navigate(`/surah/${lastRead.surahNumber}`, {
+                      state: { fromLastRead: true },
+                    })
                   }
                   className="flex items-center justify-center w-full px-4 py-3 space-x-2 text-white transition-all duration-300 rounded-xl btn-primary"
                   whileHover={{ scale: 1.02 }}

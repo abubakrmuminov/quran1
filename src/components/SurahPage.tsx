@@ -6,6 +6,7 @@ import { quranApi } from "../api/quran";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import type { Bookmark, Settings, LastRead } from "../types/quran";
 import { useParams, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 interface SurahPageProps {
   settings: Settings;
@@ -15,6 +16,7 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
   const { id } = useParams<{ id: string }>();
   const surahNumber = Number(id);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [surahData, setSurahData] = useState<any>(null);
   const [translationData, setTranslationData] = useState<any>(null);
@@ -57,17 +59,52 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
     loadSurah();
   }, [surahNumber, settings.translation]);
 
-  // Запоминаем последнюю прочитанную суру
   useEffect(() => {
-    if (surahData) {
-      setLastRead({
+    if (!surahData) return;
+
+    setLastRead((prev) => {
+      // Если уже сохранена та же сура — не обновляем
+      if (prev?.surahNumber === surahNumber) {
+        return prev;
+      }
+      return {
         surahNumber,
         ayahNumber: 1,
         surahName: surahData.englishName,
         timestamp: Date.now(),
+      };
+    });
+  }, [surahData, surahNumber]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const ayahElements = document.querySelectorAll("[data-ayah]");
+      let firstVisibleAyah: number | null = null;
+
+      ayahElements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        if (
+          rect.top >= 0 &&
+          rect.top < window.innerHeight / 2 &&
+          !firstVisibleAyah
+        ) {
+          firstVisibleAyah = Number(el.getAttribute("data-ayah"));
+        }
       });
-    }
-  }, [surahData, surahNumber, setLastRead]);
+
+      if (firstVisibleAyah) {
+        setLastRead({
+          surahNumber,
+          ayahNumber: firstVisibleAyah,
+          surahName: surahData.englishName,
+          timestamp: Date.now(),
+        });
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [surahNumber, surahData, setLastRead]);
 
   // ⭐ воспроизведение аята с автоплеем
   const playAyah = async (ayahIndex: number) => {
@@ -121,6 +158,25 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
     return () => stopAudio();
   }, []);
 
+  // Скроллим только если пришли с Last Read
+  useEffect(() => {
+    if (location.state?.fromLastRead) {
+      const lastRead = JSON.parse(localStorage.getItem("lastRead") || "null");
+
+      if (lastRead && lastRead.surahNumber === surahNumber) {
+        const el = document.getElementById(`ayah-${lastRead.ayahNumber}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+          el.classList.add("ring-2", "ring-yellow-400");
+          setTimeout(() => {
+            el.classList.remove("ring-2", "ring-yellow-400");
+          }, 2000);
+        }
+      }
+    }
+  }, [surahData, surahNumber, location.state]);
+
   const handleToggleBookmark = (bookmark: Bookmark) => {
     setBookmarks((prev) => {
       const isBookmarked = prev.some(
@@ -158,7 +214,7 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
       <div className="flex flex-col items-center justify-center min-h-screen">
         <p className="mb-4 text-red-500">Ошибка загрузки суры</p>
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/")}
           className="flex items-center px-4 py-2 text-gray-200 transition bg-gray-700 rounded-lg hover:bg-gray-600"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Назад
@@ -175,9 +231,7 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
     >
       {/* Header */}
       <div className="mb-8 text-center">
-        <h1 className="mb-2 text-3xl font-bold text-white">
-          {surahData.name}
-        </h1>
+        <h1 className="mb-2 text-3xl font-bold text-white">{surahData.name}</h1>
         <div className="text-gray-400">
           {surahData.englishName} — {surahData.englishNameTranslation}
         </div>
@@ -189,7 +243,7 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
       {/* Кнопки */}
       <div className="flex items-center justify-between mb-6">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/")}
           className="flex items-center px-3 py-2 text-gray-300 transition bg-gray-800 rounded-lg hover:bg-gray-700"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Назад
