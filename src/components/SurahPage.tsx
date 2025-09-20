@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, StopCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { AyahCard } from "./AyahCard";
@@ -7,6 +7,7 @@ import { useLocalStorage } from "../hooks/useLocalStorage";
 import type { Bookmark, Settings, LastRead } from "../types/quran";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
+import { SurahSkeleton } from "./SurahSkeleton";
 
 interface SurahPageProps {
   settings: Settings;
@@ -26,10 +27,18 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
     []
   );
   const [, setLastRead] = useLocalStorage<LastRead | null>("lastRead", null);
+  // маппинг для шрифтов
+  const fontSizeMap: Record<string, string> = {
+    small: "text-sm",
+    medium: "text-base",
+    large: "text-lg sm:text-xl",
+  };
 
-  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(
-    null
-  );
+  const fontSizeClass = fontSizeMap[settings.fontSize] || "text-base";
+
+  
+  // <-- заменили state на ref для текущего audio
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const [currentAyah, setCurrentAyah] = useState<number | null>(null);
 
   // Загружаем суру
@@ -42,13 +51,10 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
           quranApi.getSurahWithTranslation(surahNumber, settings.translation),
         ]);
 
-        // фиксируем нумерацию: бисмиллях = 0
-        const fixedAyahs = arabicData.ayahs.map((a: any, i: number) => ({
-          ...a,
-          numberInSurah: i === 0 ? 0 : a.numberInSurah,
-        }));
+        setSurahData(arabicData);
 
-        setSurahData({ ...arabicData, ayahs: fixedAyahs });
+
+        setSurahData({ ...arabicData, });
         setTranslationData(translationData);
       } catch (error) {
         console.error("Error loading surah:", error);
@@ -63,10 +69,7 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
     if (!surahData) return;
 
     setLastRead((prev) => {
-      // Если уже сохранена та же сура — не обновляем
-      if (prev?.surahNumber === surahNumber) {
-        return prev;
-      }
+      if (prev?.surahNumber === surahNumber) return prev;
       return {
         surahNumber,
         ayahNumber: 1,
@@ -106,12 +109,15 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [surahNumber, surahData, setLastRead]);
 
-  // ⭐ воспроизведение аята с автоплеем
+  // ⭐ воспроизведение аята с автоплеем (используем ref)
   const playAyah = async (ayahIndex: number) => {
     try {
-      if (currentAudio) {
-        currentAudio.pause();
-        setCurrentAudio(null);
+      // если что-то уже играет — полностью остановим/очистим
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.onended = null;
+        currentAudioRef.current.src = "";
+        currentAudioRef.current = null;
       }
 
       const ayah = surahData.ayahs[ayahIndex];
@@ -123,40 +129,58 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
 
       if (audioData.audio) {
         const audio = new Audio(audioData.audio);
-        setCurrentAudio(audio);
+        currentAudioRef.current = audio;
         setCurrentAyah(ayah.number);
 
         audio.onended = () => {
           const nextIndex = ayahIndex + 1;
           if (nextIndex < surahData.ayahs.length) {
-            playAyah(nextIndex); // автоплей следующий
+            playAyah(nextIndex);
           } else {
-            setCurrentAudio(null);
+            // конец суры
+            if (currentAudioRef.current) {
+              currentAudioRef.current.onended = null;
+              currentAudioRef.current = null;
+            }
             setCurrentAyah(null);
           }
         };
 
+        // попытка проиграть
         await audio.play();
       }
     } catch (err) {
       console.error("Ошибка воспроизведения:", err);
-      setCurrentAudio(null);
+      // на всякий случай очищаем
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.onended = null;
+        currentAudioRef.current.src = "";
+        currentAudioRef.current = null;
+      }
       setCurrentAyah(null);
     }
   };
 
   const stopAudio = () => {
-    if (currentAudio) {
-      currentAudio.pause();
-      setCurrentAudio(null);
-      setCurrentAyah(null);
+    const audio = currentAudioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.onended = null;
+      audio.src = "";
+      currentAudioRef.current = null;
     }
+    setCurrentAyah(null);
   };
 
-  // ⚡️ останавливаем звук при уходе со страницы
+  // ⚡️ останавливаем звук при смене маршрута или при unmount
   useEffect(() => {
-    return () => stopAudio();
-  }, []);
+    return () => {
+      stopAudio();
+    };
+    // cleanup сработает при изменении pathname и при unmount
+  }, [location.pathname]);
 
   // Скроллим только если пришли с Last Read
   useEffect(() => {
@@ -202,11 +226,7 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
     );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen text-gray-400">
-        Загрузка...
-      </div>
-    );
+    return <SurahSkeleton />;
   }
 
   if (!surahData || !translationData) {
@@ -222,12 +242,13 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
       </div>
     );
   }
+  console.log("fontSize:", settings.fontSize);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-3xl p-6 mx-auto"
+      className="max-w-3xl p-6 pt-20 mx-auto"
     >
       {/* Header */}
       <div className="mb-8 text-center">
@@ -248,14 +269,6 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Назад
         </button>
-        {currentAudio && (
-          <button
-            onClick={stopAudio}
-            className="flex items-center px-3 py-2 text-red-400 transition rounded-lg bg-red-600/20 hover:bg-red-600/30"
-          >
-            <StopCircle className="w-4 h-4 mr-2" /> Остановить всё
-          </button>
-        )}
       </div>
 
       {/* Все аяты */}
@@ -263,6 +276,7 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
         {surahData.ayahs.map((ayah: any, index: number) => (
           <AyahCard
             key={ayah.number}
+            fontSizeClass={fontSizeClass}
             ayah={ayah}
             translation={translationData.ayahs[index]}
             surahNumber={surahNumber}
@@ -272,6 +286,7 @@ export const SurahPage: React.FC<SurahPageProps> = ({ settings }) => {
             onToggleBookmark={handleToggleBookmark}
             currentAyah={currentAyah}
             onPlay={() => playAyah(index)}
+            onStop={stopAudio}
           />
         ))}
       </div>

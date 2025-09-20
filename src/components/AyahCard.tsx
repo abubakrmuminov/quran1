@@ -1,5 +1,11 @@
 import React, { useRef, useEffect } from "react";
-import { Bookmark as BookmarkIcon, Play, Volume2, Hash } from "lucide-react";
+import {
+  Bookmark as BookmarkIcon,
+  Play,
+  Volume2,
+  Hash,
+  StopCircle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
 interface AyahCardProps {
@@ -12,6 +18,8 @@ interface AyahCardProps {
   onToggleBookmark: (bookmark: any) => void;
   currentAyah: number | null;
   onPlay: () => void;
+  onStop: () => void; // ← добавляем
+  fontSizeClass: string;
 }
 
 export const AyahCard: React.FC<AyahCardProps> = ({
@@ -23,6 +31,8 @@ export const AyahCard: React.FC<AyahCardProps> = ({
   onToggleBookmark,
   currentAyah,
   onPlay,
+  onStop,
+  fontSizeClass
 }) => {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const isThisPlaying = currentAyah === ayah.number;
@@ -40,7 +50,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
   return (
     <motion.div
       ref={cardRef}
-      data-ayah={ayah.numberInSurah} 
+      data-ayah={ayah.numberInSurah}
       id={`ayah-${ayah.numberInSurah}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -85,6 +95,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
           </motion.div>
 
           {/* Action buttons */}
+          {/* Action buttons */}
           <div className="flex items-center space-x-2">
             <motion.button
               onClick={() =>
@@ -109,29 +120,40 @@ export const AyahCard: React.FC<AyahCardProps> = ({
               />
             </motion.button>
 
-            <motion.button
-              onClick={onPlay}
-              className={`p-3 rounded-xl transition-all duration-300 ${
-                isThisPlaying
-                  ? "text-blue-400 bg-blue-500/20 hover:bg-blue-500/30"
-                  : "text-gray-400 hover:text-blue-400 hover:bg-blue-500/10"
-              }`}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <Play className="w-5 h-5" />
-            </motion.button>
+            {isThisPlaying ? (
+              <motion.button
+                onClick={onStop}
+                className="p-3 text-red-400 transition-all duration-300 rounded-xl bg-red-500/20 hover:bg-red-500/30"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <StopCircle className="w-5 h-5" />
+              </motion.button>
+            ) : (
+              <motion.button
+                onClick={onPlay}
+                className="p-3 text-gray-400 transition-all duration-300 rounded-xl hover:text-blue-400 hover:bg-blue-500/10"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Play className="w-5 h-5" />
+              </motion.button>
+            )}
           </div>
         </div>
 
         {/* Arabic text */}
         <div className="mb-6 text-right">
-          <p className="leading-loose font-arabic">{ayah.text}</p>
+          <p className={`leading-loose font-arabic ${fontSizeClass}`}>
+            {ayah.text}
+          </p>
         </div>
 
         {/* Translation */}
         <div className="pt-4 border-t border-gray-700/50">
-          <p className="leading-relaxed text-gray-300">{translation.text}</p>
+          <p className={`leading-relaxed text-gray-300 ${fontSizeClass}`}>
+            {translation.text}
+          </p>
         </div>
 
         {/* Ayah metadata */}

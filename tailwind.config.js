@@ -33,5 +33,13 @@ export default {
       }
     },
   },
+  extend: {
+    fontSize: {
+      small: "text-sm",
+      medium: "text-base",
+      large: "text-lg",
+    }
+  },
+  
   plugins: [],
 };

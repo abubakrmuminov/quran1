@@ -7,6 +7,7 @@ import { Bookmarks } from "./components/Bookmarks";
 import { Settings } from "./components/Settings";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import type { Settings as SettingsType } from "./types/quran";
+import { Footer } from "./components/Footer";
 
 function App() {
   const [settings, setSettings] = useLocalStorage<SettingsType>("settings", {
@@ -18,7 +19,10 @@ function App() {
 
   // применяем тему
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", settings.theme === "dark");
+    document.documentElement.classList.toggle(
+      "dark",
+      settings.theme === "dark"
+    );
   }, [settings.theme]);
 
   const handleToggleTheme = () => {
@@ -29,13 +33,15 @@ function App() {
   };
 
   return (
-    <div className={`min-h-screen transition-colors ${settings.theme}`}>
+    <div
+      className={`flex flex-col min-h-screen transition-colors ${settings.theme} ${settings.fontSize}`}
+    >
       <Navigation
         isDark={settings.theme === "dark"}
         onToggleTheme={handleToggleTheme}
       />
 
-      <main>
+      <main className="flex-1">
         <Routes>
           {/* Главная страница */}
           <Route path="/" element={<Dashboard settings={settings} />} />
@@ -74,6 +80,11 @@ function App() {
           />
         </Routes>
       </main>
+      <Footer
+        onNavigateHome={function (): void {
+          throw new Error("Function not implemented.");
+        }}
+      ></Footer>
     </div>
   );
 }
