@@ -28,7 +28,7 @@ export const Bookmarks: React.FC = () => {
 
   if (bookmarks.length === 0) {
     return (
-      <div className="min-h-screen pt-16">
+      <div className="min-h-screen pt-16 bg-gray-900">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -56,7 +56,7 @@ export const Bookmarks: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-screen pt-16 bg-gray-900">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
