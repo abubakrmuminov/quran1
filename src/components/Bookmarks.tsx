@@ -123,9 +123,9 @@ export const Bookmarks: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <motion.button
                       onClick={() =>
-                        navigate(
-                          `/surah/${bookmark.surahNumber}?ayah=${bookmark.ayahNumber}`
-                        )
+                        navigate(`/surah/${bookmark.surahNumber}`, {
+                          state: { fromBookmark: true, ayahNumber: bookmark.ayahNumber },
+                        })
                       }
                       className="flex items-center px-4 py-2 space-x-2 text-blue-400 transition-all duration-300 rounded-xl hover:text-blue-300 hover:bg-blue-500/10"
                       whileHover={{ scale: 1.05 }}
