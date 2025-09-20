@@ -40,7 +40,7 @@ export const AyahCard: React.FC<AyahCardProps> = ({
   return (
     <motion.div
       ref={cardRef}
-      data-ayah={ayah.numberInSurah} // 👈 вот это!
+      data-ayah={ayah.numberInSurah} 
       id={`ayah-${ayah.numberInSurah}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}

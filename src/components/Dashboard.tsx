@@ -1,5 +1,5 @@
-import React from "react";
-import { Star, ArrowRight } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Star, ArrowRight, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { SurahList } from "./SurahList";
@@ -10,9 +10,48 @@ interface DashboardProps {
   settings: Settings;
 }
 
+interface AyahData {
+  text: string;
+  surah: { englishName: string; name: string };
+  numberInSurah: number;
+}
+
 export const Dashboard: React.FC<DashboardProps> = ({ settings }) => {
   const [lastRead] = useLocalStorage<LastRead | null>("lastRead", null);
+  const [ayahOfTheDay, setAyahOfTheDay] = useState<AyahData | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), 0, 0);
+    const diff = today.getTime() - start.getTime();
+    const oneDay = 1000 * 60 * 60 * 24;
+    const dayOfYear = Math.floor(diff / oneDay);
+
+    const ayahNumber = (dayOfYear % 6236) + 1; // всего 6236 аятов
+
+    const fetchAyah = async () => {
+      try {
+        const res = await fetch(
+          `https://api.alquran.cloud/v1/ayah/${ayahNumber}`
+        );
+        const data = await res.json();
+        const ayah = {
+          text: data.data.text,
+          surah: {
+            englishName: data.data.surah.englishName,
+            name: data.data.surah.name,
+          },
+          numberInSurah: data.data.numberInSurah,
+        };
+        setAyahOfTheDay(ayah);
+      } catch (err) {
+        console.error("Ошибка при загрузке аята:", err);
+      }
+    };
+
+    fetchAyah();
+  }, []);
 
   return (
     <div className="min-h-screen pt-16">
@@ -33,6 +72,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ settings }) => {
             thoughtful translations, and a calm design that helps you connect
             with every verse.
           </p>
+
+          {/* Ayah of the Day */}
+          {ayahOfTheDay && (
+            <div className="max-w-md mx-auto mt-12">
+              <div className="p-6 glass rounded-2xl">
+                <div className="flex items-center mb-3 space-x-2">
+                  <BookOpen className="w-5 h-5 text-green-400" />
+                  <span className="text-sm font-medium text-gray-300">
+                    Ayah of the Day
+                  </span>
+                </div>
+                <p className="mb-4 text-lg italic text-gray-200">
+                  “{ayahOfTheDay.text}”
+                </p>
+                <p className="text-sm text-gray-400">
+                  {ayahOfTheDay.surah.englishName} ({ayahOfTheDay.surah.name}) —
+                  Ayah {ayahOfTheDay.numberInSurah}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Last Read Section */}
           {lastRead && (
